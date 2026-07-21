@@ -13,7 +13,9 @@ int main(void)
         0x08, 0x00
     };
 
-    printf("Destination MAC: FF:FF:FF:FF:FF:FF\n");
+    printf("Destination MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+       packet[0], packet[1], packet[2],
+       packet[3], packet[4], packet[5]);
 
     printf("Source MAC:      %02X:%02X:%02X:%02X:%02X:%02X\n",
            packet[6], packet[7], packet[8],
