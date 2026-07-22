@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #define ETHERNET_HEADER_SIZE 14
+#define IPV4_CHECKSUM_OFFSET 10
 
 
 struct IPv4Header
@@ -14,6 +15,29 @@ struct IPv4Header
     unsigned char sourceIP[4];
     unsigned char destinationIP[4];
 };
+
+
+unsigned short calculateIPv4Checksum(unsigned char header[], int length)
+{
+    unsigned int sum = 0;
+
+    for (int i = 0; i < length; i += 2)
+    {
+        unsigned short word =
+            (header[i] << 8) | header[i + 1];
+
+        sum += word;
+    }
+
+
+    while (sum >> 16)
+    {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+
+
+    return (unsigned short)(~sum);
+}
 
 
 void parseEthernetHeader(unsigned char packet[])
@@ -38,26 +62,11 @@ void parseEthernetHeader(unsigned char packet[])
     {
         printf("Protocol:        IPv4\n");
     }
-    else if (etherType == 0x0806)
-    {
-        printf("Protocol:        ARP\n");
-    }
-    else
-    {
-        printf("Protocol:        Unknown\n");
-    }
 }
 
 
 void parseIPv4Header(unsigned char packet[], int start, int packetSize)
 {
-    if (packetSize < start + 20)
-    {
-        printf("Packet too small for IPv4 header\n");
-        return;
-    }
-
-
     struct IPv4Header ip;
 
 
@@ -66,39 +75,38 @@ void parseIPv4Header(unsigned char packet[], int start, int packetSize)
     ip.ihl = packet[start] & 0x0F;
 
 
-    if (ip.version != 4)
-    {
-        printf("Not an IPv4 packet\n");
-        return;
-    }
-
-
-    if (ip.ihl < 5)
-    {
-        printf("Invalid IPv4 header length\n");
-        return;
-    }
-
-
     unsigned int headerLength = ip.ihl * 4;
 
 
-    if (packetSize < start + headerLength)
+    unsigned short receivedChecksum =
+        (packet[start + IPV4_CHECKSUM_OFFSET] << 8) |
+        packet[start + IPV4_CHECKSUM_OFFSET + 1];
+
+
+    unsigned short verification =
+        calculateIPv4Checksum(
+            &packet[start],
+            headerLength
+        );
+
+
+    printf("\nReceived Checksum: 0x%04X\n",
+           receivedChecksum);
+
+
+    if (verification == 0)
     {
-        printf("Incomplete IPv4 header\n");
-        return;
+        printf("Checksum Status:   Valid\n");
+    }
+    else
+    {
+        printf("Checksum Status:   Invalid\n");
     }
 
 
     ip.totalLength =
-        (packet[start + 2] << 8) | packet[start + 3];
-
-
-    if (ip.totalLength > packetSize - start)
-    {
-        printf("Invalid IPv4 total length\n");
-        return;
-    }
+        (packet[start + 2] << 8) |
+        packet[start + 3];
 
 
     ip.ttl = packet[start + 8];
@@ -126,24 +134,6 @@ void parseIPv4Header(unsigned char packet[], int start, int packetSize)
     printf("Protocol ID:     %u\n", ip.protocol);
 
 
-    if (ip.protocol == 1)
-    {
-        printf("Next Protocol:   ICMP\n");
-    }
-    else if (ip.protocol == 6)
-    {
-        printf("Next Protocol:   TCP\n");
-    }
-    else if (ip.protocol == 17)
-    {
-        printf("Next Protocol:   UDP\n");
-    }
-    else
-    {
-        printf("Next Protocol:   Unknown\n");
-    }
-
-
     printf("Source IP:       %u.%u.%u.%u\n",
            ip.sourceIP[0],
            ip.sourceIP[1],
@@ -161,74 +151,82 @@ void parseIPv4Header(unsigned char packet[], int start, int packetSize)
 
 int main(void)
 {
-    unsigned char packet[] = {
-
+    unsigned char packet[] =
+    {
         // Ethernet Header
-
-        // Destination MAC
-        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-
-        // Source MAC
-        0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC,
-
-        // EtherType IPv4
-        0x08, 0x00,
+        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+        0x12,0x34,0x56,0x78,0x9A,0xBC,
+        0x08,0x00,
 
 
         // IPv4 Header
-
-        // Version + IHL
         0x45,
-
-        // DSCP + ECN
         0x00,
 
-        // Total Length = 60 bytes
-        0x00, 0x3C,
+        0x00,0x3C,
 
-        // Identification
-        0x12, 0x34,
+        0x12,0x34,
 
-        // Flags + Fragment Offset
-        0x00, 0x00,
+        0x00,0x00,
 
-        // TTL
         0x40,
 
-        // Protocol TCP
         0x06,
 
-        // Header Checksum
-        0x00, 0x00,
-
-        // Source IP: 192.168.1.100
-        0xC0, 0xA8, 0x01, 0x64,
-
-        // Destination IP: 8.8.8.8
-        0x08, 0x08, 0x08, 0x08,
+        // checksum initially zero
+        0x00,0x00,
 
 
-        // Payload (40 bytes)
+        // Source IP
+        0xC0,0xA8,0x01,0x64,
 
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
 
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
+        // Destination IP
+        0x08,0x08,0x08,0x08,
 
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
 
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00
+        // Payload
+        0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00
     };
 
 
+    unsigned char ipv4Start = ETHERNET_HEADER_SIZE;
+
+
+    unsigned int headerLength =
+        (packet[ipv4Start] & 0x0F) * 4;
+
+
+    unsigned short checksum =
+        calculateIPv4Checksum(
+            &packet[ipv4Start],
+            headerLength
+        );
+
+
+    packet[ipv4Start + IPV4_CHECKSUM_OFFSET] =
+        checksum >> 8;
+
+
+    packet[ipv4Start + IPV4_CHECKSUM_OFFSET + 1] =
+        checksum & 0xFF;
+
+
+    printf("Inserted Checksum: 0x%04X\n\n",
+           checksum);
+
+
     parseEthernetHeader(packet);
+
 
     parseIPv4Header(
         packet,
