@@ -1,5 +1,21 @@
 #include <stdio.h>
 
+#define ETHERNET_HEADER_SIZE 14
+
+
+struct IPv4Header
+{
+    unsigned char version;
+    unsigned char ihl;
+    unsigned short totalLength;
+    unsigned char ttl;
+    unsigned char protocol;
+
+    unsigned char sourceIP[4];
+    unsigned char destinationIP[4];
+};
+
+
 void parseEthernetHeader(unsigned char packet[])
 {
     printf("Destination MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
@@ -10,7 +26,8 @@ void parseEthernetHeader(unsigned char packet[])
            packet[6], packet[7], packet[8],
            packet[9], packet[10], packet[11]);
 
-    unsigned short etherType = (packet[12] << 8) | packet[13];
+    unsigned short etherType =
+        (packet[12] << 8) | packet[13];
 
     printf("EtherType:       0x%04X\n", etherType);
 
@@ -31,33 +48,48 @@ void parseEthernetHeader(unsigned char packet[])
 
 void parseIPv4Header(unsigned char packet[], int start)
 {
-    unsigned char version = packet[start] >> 4;
-    printf("Version:         %u\n", version);
+    struct IPv4Header ip;
 
-    unsigned char ihl = packet[start] & 0x0F;
-    printf("IHL:             %u\n", ihl);
+    ip.version = packet[start] >> 4;
 
-    unsigned short totalLength =
+    ip.ihl = packet[start] & 0x0F;
+
+    ip.totalLength =
         (packet[start + 2] << 8) | packet[start + 3];
 
-    printf("Total Length:    %u bytes\n", totalLength);
+    ip.ttl = packet[start + 8];
 
-    unsigned char ttl = packet[start + 8];
-    printf("TTL:             %u\n", ttl);
+    ip.protocol = packet[start + 9];
 
-    unsigned char protocol = packet[start + 9];
 
-    printf("Protocol ID:     %u\n", protocol);
+    ip.sourceIP[0] = packet[start + 12];
+    ip.sourceIP[1] = packet[start + 13];
+    ip.sourceIP[2] = packet[start + 14];
+    ip.sourceIP[3] = packet[start + 15];
 
-    if (protocol == 1)
+
+    ip.destinationIP[0] = packet[start + 16];
+    ip.destinationIP[1] = packet[start + 17];
+    ip.destinationIP[2] = packet[start + 18];
+    ip.destinationIP[3] = packet[start + 19];
+
+
+    printf("Version:         %u\n", ip.version);
+    printf("IHL:             %u\n", ip.ihl);
+    printf("Total Length:    %u bytes\n", ip.totalLength);
+    printf("TTL:             %u\n", ip.ttl);
+    printf("Protocol ID:     %u\n", ip.protocol);
+
+
+    if (ip.protocol == 1)
     {
         printf("Next Protocol:   ICMP\n");
     }
-    else if (protocol == 6)
+    else if (ip.protocol == 6)
     {
         printf("Next Protocol:   TCP\n");
     }
-    else if (protocol == 17)
+    else if (ip.protocol == 17)
     {
         printf("Next Protocol:   UDP\n");
     }
@@ -66,17 +98,19 @@ void parseIPv4Header(unsigned char packet[], int start)
         printf("Next Protocol:   Unknown\n");
     }
 
+
     printf("Source IP:       %u.%u.%u.%u\n",
-           packet[start + 12],
-           packet[start + 13],
-           packet[start + 14],
-           packet[start + 15]);
+           ip.sourceIP[0],
+           ip.sourceIP[1],
+           ip.sourceIP[2],
+           ip.sourceIP[3]);
+
 
     printf("Destination IP:  %u.%u.%u.%u\n",
-           packet[start + 16],
-           packet[start + 17],
-           packet[start + 18],
-           packet[start + 19]);
+           ip.destinationIP[0],
+           ip.destinationIP[1],
+           ip.destinationIP[2],
+           ip.destinationIP[3]);
 }
 
 
@@ -84,7 +118,7 @@ int main(void)
 {
     unsigned char packet[] = {
 
-        // Ethernet Header (14 bytes)
+        // Ethernet Header
 
         // Destination MAC
         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -96,7 +130,7 @@ int main(void)
         0x08, 0x00,
 
 
-        // IPv4 Header (20 bytes)
+        // IPv4 Header
 
         // Version + IHL
         0x45,
@@ -132,7 +166,7 @@ int main(void)
 
     parseEthernetHeader(packet);
 
-    parseIPv4Header(packet, 14);
+    parseIPv4Header(packet, ETHERNET_HEADER_SIZE);
 
 
     return 0;
