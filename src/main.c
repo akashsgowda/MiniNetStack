@@ -51,7 +51,6 @@ void parseEthernetHeader(unsigned char packet[])
 
 void parseIPv4Header(unsigned char packet[], int start, int packetSize)
 {
-    // Minimum IPv4 header check
     if (packetSize < start + 20)
     {
         printf("Packet too small for IPv4 header\n");
@@ -95,6 +94,13 @@ void parseIPv4Header(unsigned char packet[], int start, int packetSize)
         (packet[start + 2] << 8) | packet[start + 3];
 
 
+    if (ip.totalLength > packetSize - start)
+    {
+        printf("Invalid IPv4 total length\n");
+        return;
+    }
+
+
     ip.ttl = packet[start + 8];
 
     ip.protocol = packet[start + 9];
@@ -113,15 +119,10 @@ void parseIPv4Header(unsigned char packet[], int start, int packetSize)
 
 
     printf("Version:         %u\n", ip.version);
-
     printf("IHL:             %u\n", ip.ihl);
-
     printf("Header Length:   %u bytes\n", headerLength);
-
     printf("Total Length:    %u bytes\n", ip.totalLength);
-
     printf("TTL:             %u\n", ip.ttl);
-
     printf("Protocol ID:     %u\n", ip.protocol);
 
 
@@ -182,7 +183,7 @@ int main(void)
         // DSCP + ECN
         0x00,
 
-        // Total Length
+        // Total Length = 60 bytes
         0x00, 0x3C,
 
         // Identification
@@ -200,11 +201,30 @@ int main(void)
         // Header Checksum
         0x00, 0x00,
 
-        // Source IP
+        // Source IP: 192.168.1.100
         0xC0, 0xA8, 0x01, 0x64,
 
-        // Destination IP
-        0x08, 0x08, 0x08, 0x08
+        // Destination IP: 8.8.8.8
+        0x08, 0x08, 0x08, 0x08,
+
+
+        // Payload (40 bytes)
+
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00
     };
 
 
