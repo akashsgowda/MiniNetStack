@@ -26,10 +26,13 @@ void parseEthernetHeader(unsigned char packet[])
            packet[6], packet[7], packet[8],
            packet[9], packet[10], packet[11]);
 
+
     unsigned short etherType =
         (packet[12] << 8) | packet[13];
 
+
     printf("EtherType:       0x%04X\n", etherType);
+
 
     if (etherType == 0x0800)
     {
@@ -46,16 +49,51 @@ void parseEthernetHeader(unsigned char packet[])
 }
 
 
-void parseIPv4Header(unsigned char packet[], int start)
+void parseIPv4Header(unsigned char packet[], int start, int packetSize)
 {
+    // Minimum IPv4 header check
+    if (packetSize < start + 20)
+    {
+        printf("Packet too small for IPv4 header\n");
+        return;
+    }
+
+
     struct IPv4Header ip;
+
 
     ip.version = packet[start] >> 4;
 
     ip.ihl = packet[start] & 0x0F;
 
+
+    if (ip.version != 4)
+    {
+        printf("Not an IPv4 packet\n");
+        return;
+    }
+
+
+    if (ip.ihl < 5)
+    {
+        printf("Invalid IPv4 header length\n");
+        return;
+    }
+
+
+    unsigned int headerLength = ip.ihl * 4;
+
+
+    if (packetSize < start + headerLength)
+    {
+        printf("Incomplete IPv4 header\n");
+        return;
+    }
+
+
     ip.totalLength =
         (packet[start + 2] << 8) | packet[start + 3];
+
 
     ip.ttl = packet[start + 8];
 
@@ -75,9 +113,15 @@ void parseIPv4Header(unsigned char packet[], int start)
 
 
     printf("Version:         %u\n", ip.version);
+
     printf("IHL:             %u\n", ip.ihl);
+
+    printf("Header Length:   %u bytes\n", headerLength);
+
     printf("Total Length:    %u bytes\n", ip.totalLength);
+
     printf("TTL:             %u\n", ip.ttl);
+
     printf("Protocol ID:     %u\n", ip.protocol);
 
 
@@ -166,7 +210,11 @@ int main(void)
 
     parseEthernetHeader(packet);
 
-    parseIPv4Header(packet, ETHERNET_HEADER_SIZE);
+    parseIPv4Header(
+        packet,
+        ETHERNET_HEADER_SIZE,
+        sizeof(packet)
+    );
 
 
     return 0;
