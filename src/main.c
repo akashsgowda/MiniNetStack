@@ -28,6 +28,57 @@ void parseEthernetHeader(unsigned char packet[])
     }
 }
 
+    void parseIPv4Header(unsigned char packet[])
+{
+    int ipv4Start = 14;
+
+    unsigned char version = packet[ipv4Start] >> 4;
+    printf("Version:         %u\n", version);
+
+    unsigned char ihl = packet[ipv4Start] & 0x0F;
+    printf("IHL:             %u\n", ihl);
+
+    unsigned short totalLength =
+        (packet[ipv4Start + 2] << 8) | packet[ipv4Start + 3];
+    printf("Total Length:    %u bytes\n", totalLength);
+
+    unsigned char ttl = packet[ipv4Start + 8];
+    printf("TTL:             %u\n", ttl);
+
+    unsigned char protocol = packet[ipv4Start + 9];
+
+    printf("Protocol ID:     %u\n", protocol);
+
+    if (protocol == 1)
+    {
+        printf("Next Protocol:   ICMP\n");
+    }
+    else if (protocol == 6)
+    {
+        printf("Next Protocol:   TCP\n");
+    }
+    else if (protocol == 17)
+    {
+        printf("Next Protocol:   UDP\n");
+    }
+    else
+    {
+        printf("Next Protocol:   Unknown\n");
+    }
+
+    printf("Source IP:       %u.%u.%u.%u\n",
+           packet[ipv4Start + 12],
+           packet[ipv4Start + 13],
+           packet[ipv4Start + 14],
+           packet[ipv4Start + 15]);
+
+    printf("Destination IP:  %u.%u.%u.%u\n",
+           packet[ipv4Start + 16],
+           packet[ipv4Start + 17],
+           packet[ipv4Start + 18],
+           packet[ipv4Start + 19]);
+}
+
 int main(void)
 {
     unsigned char packet[] = {
@@ -81,46 +132,7 @@ int main(void)
 
     parseEthernetHeader(packet);
 
-    unsigned char version = packet[14] >> 4;
-    printf("Version:         %u\n", version);
-
-    unsigned char ihl = packet[14] & 0x0F;
-    printf("IHL:             %u\n", ihl);
-
-    unsigned short totalLength = (packet[16] << 8) | packet[17];
-    printf("Total Length:    %u bytes\n", totalLength);
-
-    unsigned char ttl = packet[22];
-    printf("TTL:             %u\n", ttl);
-
-    unsigned char protocol = packet[23];
-
-    printf("Protocol ID:     %u\n", protocol);
-
-    if (protocol == 1)
-    {
-        printf("Next Protocol:   ICMP\n");
-    }
-    else if (protocol == 6)
-    {
-        printf("Next Protocol:   TCP\n");
-    }
-    else if (protocol == 17)
-    {
-        printf("Next Protocol:   UDP\n");
-    }
-    else
-    {
-        printf("Next Protocol:   Unknown\n");
-    }
-
-    printf("Source IP:       %u.%u.%u.%u\n",
-           packet[26], packet[27],
-           packet[28], packet[29]);
-
-    printf("Destination IP:  %u.%u.%u.%u\n",
-           packet[30], packet[31],
-           packet[32], packet[33]);
+    parseIPv4Header(packet);
 
     return 0;
 }
