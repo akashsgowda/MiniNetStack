@@ -1,10 +1,12 @@
 #include "checksum.h"
+#include "icmp.h"
 #include "ipv4.h"
 #include "ipv4_builder.h"
 #include <stdio.h>
 
 #define ETHERNET_HEADER_SIZE 14
 #define IPV4_CHECKSUM_OFFSET 10
+#define IPV4_HEADER_SIZE 20
 
 void parseEthernetHeader(unsigned char packet[])
 {
@@ -61,7 +63,22 @@ int main(void)
 
     buildIPv4Header(&packet[ipv4Start], 40);
 
-    printf("Inserted Checksum: 0x%04X\n\n", (packet[ipv4Start + 10] << 8) | packet[ipv4Start + 11]);
+    unsigned int icmpStart = ipv4Start + IPV4_HEADER_SIZE;
+
+    buildICMPEchoRequest(&packet[icmpStart], 0x1234, 1);
+
+    parseICMP(packet, icmpStart, sizeof(packet));
+
+    printf("ICMP Header:\n");
+
+    for (int i = 0; i < 8; i++)
+    {
+        printf("%02X ", packet[icmpStart + i]);
+    }
+
+    printf("\n\n");
+
+    printf("IPv4 Checksum: 0x%04X\n\n", (packet[ipv4Start + 10] << 8) | packet[ipv4Start + 11]);
 
     parseEthernetHeader(packet);
 
