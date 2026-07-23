@@ -1,6 +1,6 @@
-#include <stdio.h>
 #include "ipv4.h"
 #include "checksum.h"
+#include <stdio.h>
 
 #define IPV4_CHECKSUM_OFFSET 10
 
@@ -37,7 +37,7 @@ const char *getProtocolName(unsigned char protocol)
     }
 }
 
-void parseIPv4Header(unsigned char packet[], int start, int packetSize)
+void parseIPv4Header(unsigned char packet[], unsigned int start, unsigned int packetSize)
 {
     struct IPv4Header ip;
 
